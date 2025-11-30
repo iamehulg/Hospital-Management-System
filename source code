@@ -1,33 +1,361 @@
-/******************************************************************************
-
-Welcome to GDB Online.
-  GDB online is an online compiler and debugger tool for C, C++, Python, PHP, Ruby, 
-  C#, OCaml, VB, Perl, Swift, Prolog, Javascript, Pascal, COBOL, HTML, CSS, JS
-  Code, Compile, Run and Debug online from anywhere in world.
-
-*******************************************************************************/
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
-int main()
-{
-    int a[] = {4, 6, 1, 0, 4};
-    int n = 5;  
+struct patient {
+    int id;
+    char name[50];
+    char dis[50];
+    char note[100];
+    int docid;
+    int bill;
+};
 
-    for(int i = 0; i < n-1; i++)
-    {
-        for(int j = 0; j < n-i-1; j++)
-        {
-            if(a[j] > a[j+1])
-            {
-                int temp = a[j];
-                a[j] = a[j+1];
-                a[j+1] = temp;
+struct doctor {
+    int id;
+    char name[50];
+    char sp[50];
+};
+
+struct appointment {
+    int patient_id;
+    int doctor_id;
+    char date[20];
+    char time[10];
+};
+
+void menu();
+
+void menu() {
+    printf("\n==============================================================");
+    printf("\n                   HOSPITAL MANAGEMENT SYSTEM");
+    printf("\n==============================================================");
+
+    printf("\n PATIENT FEATURES");
+    printf("\n   1P. Add Patient");
+    printf("\n   2P. Add Medical Note");
+    printf("\n   3P. Book Appointment");
+
+    printf("\n\n DOCTOR FEATURES");
+    printf("\n   1D. Assign Doctor");
+    printf("\n   2D. Add to Bill");
+
+    printf("\n\n ADMIN FEATURES");
+    printf("\n   1A. Add Doctor");
+    printf("\n   2A. Edit Doctor");
+    printf("\n   3A. Delete Doctor");
+    printf("\n   4A. Show Doctors by Specialization");
+    printf("\n   5A. View All Patients");
+
+    printf("\n\n   0. Exit System");
+
+    printf("\n==============================================================");
+    printf("\n Enter your choice : ");
+}
+
+int main() {
+    struct patient p;
+    struct doctor d;
+    struct appointment app;
+
+    FILE *fp, *fd, *fa;
+
+    char choice[5];
+
+    while (1) {
+        menu();
+        scanf("%4s", choice);
+
+        /* ---------------------- ADD PATIENT ---------------------- */
+        if (strcmp(choice, "1P") == 0) {
+            fp = fopen("patients.dat", "ab");
+            if (!fp) { printf("\nError opening file!"); continue; }
+
+            printf("\n--- ADD PATIENT ---");
+            printf("\n Patient ID : ");
+            scanf("%d", &p.id);
+
+            printf(" Name : ");
+            scanf(" %[^\n]", p.name);
+
+            printf(" Disease : ");
+            scanf(" %[^\n]", p.dis);
+
+            p.bill = 0;
+            p.docid = 0;
+            strcpy(p.note, "none");
+
+            fwrite(&p, sizeof(p), 1, fp);
+            fclose(fp);
+
+            printf("\n Patient Added Successfully!\n");
+        }
+
+        /* ---------------------- ADD NOTE ---------------------- */
+        else if (strcmp(choice, "2P") == 0) {
+            int id, found = 0;
+
+            printf("\n--- ADD MEDICAL NOTE ---");
+            printf("\n Patient ID : ");
+            scanf("%d", &id);
+
+            fp = fopen("patients.dat", "rb+");
+            if (!fp) { printf("\nError opening file!"); continue; }
+
+            while (fread(&p, sizeof(p), 1, fp)) {
+                if (p.id == id) {
+                    printf(" Enter Note : ");
+                    scanf(" %[^\n]", p.note);
+
+                    fseek(fp, -sizeof(p), SEEK_CUR);
+                    fwrite(&p, sizeof(p), 1, fp);
+                    found = 1;
+                    break;
+                }
             }
+
+            fclose(fp);
+            if (found) printf("\n Note Added Successfully!\n");
+            else printf("\n Patient not found!\n");
+        }
+
+        /* ---------------------- BOOK APPOINTMENT ---------------------- */
+        else if (strcmp(choice, "3P") == 0) {
+            printf("\n--- BOOK APPOINTMENT ---");
+
+            printf("\n Patient ID : ");
+            scanf("%d", &app.patient_id);
+
+            printf(" Doctor ID : ");
+            scanf("%d", &app.doctor_id);
+
+            printf(" Date (DD/MM/YYYY) : ");
+            scanf("%19s", app.date);
+
+            printf(" Time (HH:MM) : ");
+            scanf("%9s", app.time);
+
+            fa = fopen("appointments.dat", "ab");
+            if (!fa) { printf("\nError opening file!"); continue; }
+
+            fwrite(&app, sizeof(app), 1, fa);
+            fclose(fa);
+
+            printf("\n Appointment Booked Successfully!\n");
+        }
+
+        /* ---------------------- ASSIGN DOCTOR ---------------------- */
+        else if (strcmp(choice, "1D") == 0) {
+            int pid, found = 0;
+            char sp[50];
+            int did = 0;
+
+            printf("\n--- ASSIGN DOCTOR ---");
+
+            printf("\n Patient ID : ");
+            scanf("%d", &pid);
+
+            printf(" Required Specialization : ");
+            scanf(" %[^\n]", sp);
+
+            fd = fopen("doctors.dat", "rb");
+            if (!fd) { printf("\nError opening file!"); continue; }
+
+            while (fread(&d, sizeof(d), 1, fd)) {
+                if (strcmp(d.sp, sp) == 0) {
+                    did = d.id;
+                    break;
+                }
+            }
+
+            fclose(fd);
+
+            if (did == 0) {
+                printf("\n No doctor found!\n");
+                continue;
+            }
+
+            fp = fopen("patients.dat", "rb+");
+            if (!fp) { printf("\nError opening file!"); continue; }
+
+            while (fread(&p, sizeof(p), 1, fp)) {
+                if (p.id == pid) {
+                    p.docid = did;
+                    fseek(fp, -sizeof(p), SEEK_CUR);
+                    fwrite(&p, sizeof(p), 1, fp);
+                    found = 1;
+                    break;
+                }
+            }
+
+            fclose(fp);
+
+            if (found) printf("\n Doctor Assigned Successfully!\n");
+            else printf("\n Patient not found!\n");
+        }
+
+        /* ---------------------- ADD TO BILL ---------------------- */
+        else if (strcmp(choice, "2D") == 0) {
+            int id, x, found = 0;
+
+            printf("\n--- ADD TO BILL ---");
+            printf("\n Patient ID : ");
+            scanf("%d", &id);
+
+            fp = fopen("patients.dat", "rb+");
+            if (!fp) { printf("\nError opening file!"); continue; }
+
+            while (fread(&p, sizeof(p), 1, fp)) {
+                if (p.id == id) {
+                    printf(" Add Amount : ");
+                    scanf("%d", &x);
+
+                    p.bill += x;
+
+                    fseek(fp, -sizeof(p), SEEK_CUR);
+                    fwrite(&p, sizeof(p), 1, fp);
+
+                    found = 1;
+                    break;
+                }
+            }
+
+            fclose(fp);
+
+            if (found) printf("\n Bill Updated!\n");
+            else printf("\n Patient not found!\n");
+        }
+
+        /* ---------------------- ADD DOCTOR ---------------------- */
+        else if (strcmp(choice, "1A") == 0) {
+            fd = fopen("doctors.dat", "ab");
+            if (!fd) { printf("\nError opening file!"); continue; }
+
+            printf("\n--- ADD DOCTOR ---");
+
+            printf("\n Doctor ID : ");
+            scanf("%d", &d.id);
+
+            printf(" Name : ");
+            scanf(" %[^\n]", d.name);
+
+            printf(" Specialization : ");
+            scanf(" %[^\n]", d.sp);
+
+            fwrite(&d, sizeof(d), 1, fd);
+            fclose(fd);
+
+            printf("\n Doctor Added Successfully!\n");
+        }
+
+        /* ---------------------- EDIT DOCTOR ---------------------- */
+        else if (strcmp(choice, "2A") == 0) {
+            int id, found = 0;
+
+            printf("\n--- EDIT DOCTOR ---");
+            printf("\n Doctor ID : ");
+            scanf("%d", &id);
+
+            fd = fopen("doctors.dat", "rb+");
+            if (!fd) { printf("\nError opening file!"); continue; }
+
+            while (fread(&d, sizeof(d), 1, fd)) {
+                if (d.id == id) {
+                    printf(" New Name : ");
+                    scanf(" %[^\n]", d.name);
+
+                    printf(" New Specialization : ");
+                    scanf(" %[^\n]", d.sp);
+
+                    fseek(fd, -sizeof(d), SEEK_CUR);
+                    fwrite(&d, sizeof(d), 1, fd);
+
+                    found = 1;
+                    break;
+                }
+            }
+
+            fclose(fd);
+
+            if (found) printf("\n Doctor Updated!\n");
+            else printf("\n Doctor not found!\n");
+        }
+
+        /* ---------------------- DELETE DOCTOR ---------------------- */
+        else if (strcmp(choice, "3A") == 0) {
+            int id;
+
+            printf("\n--- DELETE DOCTOR ---");
+            printf("\n Doctor ID : ");
+            scanf("%d", &id);
+
+            fd = fopen("doctors.dat", "rb");
+            if (!fd) { printf("\nError opening file!"); continue; }
+
+            FILE *tmp = fopen("tmp.dat", "wb");
+            if (!tmp) { fclose(fd); continue; }
+
+            while (fread(&d, sizeof(d), 1, fd)) {
+                if (d.id != id)
+                    fwrite(&d, sizeof(d), 1, tmp);
+            }
+
+            fclose(fd);
+            fclose(tmp);
+
+            remove("doctors.dat");
+            rename("tmp.dat", "doctors.dat");
+
+            printf("\n Doctor Deleted!\n");
+        }
+
+        /* ---------------------- SHOW DOCTORS BY SPECIALIZATION ---------------------- */
+        else if (strcmp(choice, "4A") == 0) {
+            char sp[50];
+
+            printf("\n--- DOCTORS BY SPECIALIZATION ---");
+            printf("\n Enter Specialization : ");
+            scanf(" %[^\n]", sp);
+
+            fd = fopen("doctors.dat", "rb");
+            if (!fd) { printf("\nError opening file!"); continue; }
+
+            while (fread(&d, sizeof(d), 1, fd)) {
+                if (strcmp(d.sp, sp) == 0) {
+                    printf("\n Doctor ID : %d\n Name : %s\n", d.id, d.name);
+                }
+            }
+
+            fclose(fd);
+        }
+
+        /* ---------------------- VIEW ALL PATIENTS ---------------------- */
+        else if (strcmp(choice, "5A") == 0) {
+
+            printf("\n--- ALL PATIENTS ---");
+
+            fp = fopen("patients.dat", "rb");
+            if (!fp) { printf("\nError opening file!"); continue; }
+
+            while (fread(&p, sizeof(p), 1, fp)) {
+                printf("\n-------------------------------\n");
+                printf(" ID : %d\n Name : %s\n Disease : %s\n DoctorID : %d\n Bill : %d\n Note : %s\n",
+                       p.id, p.name, p.dis, p.docid, p.bill, p.note);
+            }
+
+            fclose(fp);
+        }
+
+        /* ---------------------- EXIT ---------------------- */
+        else if (strcmp(choice, "0") == 0) {
+            printf("\n Exiting System... Goodbye!\n\n");
+            break;
+        }
+
+        else {
+            printf("\n Invalid Input! Try again.\n");
         }
     }
-
-    for(int i = 0; i < n; i++)
-        printf("%d ", a[i]);
 
     return 0;
 }
